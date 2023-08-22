@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 # <HINT> Import any new Models here
-from .models import Course, Enrollment, Learner, Question, Choice, Submission
+from .models import Course, Enrollment, Question, Choice, Submission
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -11,7 +11,6 @@ import logging
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 # Create your views here.
-
 
 def registration_request(request):
     context = {}
@@ -113,13 +112,14 @@ def enroll(request, course_id):
 def submit(request, course_id):
     course = get_object_or_404(Course, pk=course_id)
     user = request.user
-    enrollment = Enrollment.objects.get(user = user, course = course)
-    submission = Submission.objects.create(enrollment = enrollment)
+    enrollment = Enrollment.objects.filter(user=user, course=course).get()
+    submission = Submission.objects.create(enrollment_id = enrollment.id )
     choices = extract_answers(request)
-    submission.choices.set(choices)
-    submission_id = submission.id
-    return HttpResponseRedirect(reverse(viewname='onlinecourse:show_exam_result', args=(course_id, submission_id)))
-    
+    for choice in choices:
+        c = Choice.objects.filter(id = int(choice)).get()
+        submission.choices.add(c)
+    submission.save()         
+    return HttpResponseRedirect(reverse(viewname='onlinecourse:show_exam_result', args=(course.id,submission.id )))
 
 # <HINT> A example method to collect the selected choices from the exam form from the request object
 def extract_answers(request):
